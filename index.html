@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="default sloth.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Sloth</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin:0;
+  font-family:'Fredoka', sans-serif;
+  background:#1a1040;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:20px;
+  text-align:center;
+}
+
+h1 {
+  color:#f9e547;
+  margin-bottom:5px;
+}
+
+#timer {
+  font-size:20px;
+  margin-bottom:5px;
+  color:#f9e547;
+}
+
+#score {
+  margin-bottom:10px;
+}
+
+.sloth-container {
+  position:relative;
+  height:130px;
+  margin-bottom:10px;
+}
+
+#sloth {
+  height:120px;
+  transition: transform .3s ease;
+}
+
+.speech {
+  background:#2d2066;
+  padding:10px 20px;
+  border-radius:20px;
+  margin-bottom:15px;
+  min-height:30px;
+}
+
+.card {
+  background:#2d2066;
+  padding:20px;
+  border-radius:25px;
+  width:300px;
+}
+
+#question {
+  font-size:36px;
+  margin-bottom:20px;
+}
+
+.answers {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+button {
+  font-family:'Fredoka', sans-serif;
+  font-size:24px;
+  padding:15px;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
+  color:white;
+  transition:.15s;
+}
+
+button:hover { transform:scale(1.05); }
+button:active { transform:scale(.95); }
+
+.correct { background:#51cf66; }
+.wrong { background:#ff6b6b; }
+
+.answer-btn:nth-child(1){background:#ff6b9d;}
+.answer-btn:nth-child(2){background:#4dc9f6;}
+.answer-btn:nth-child(3){background:#51cf66;}
+.answer-btn:nth-child(4){background:#ff8a5c;}
+
+@keyframes bounce {
+  0%{transform:scale(1);}
+  50%{transform:scale(1.2);}
+  100%{transform:scale(1);}
+}
+
+@keyframes shake {
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-5px);}
+  75%{transform:translateX(5px);}
+}
+
+.happy { animation:bounce .5s ease; }
+.sad { animation:shake .4s ease; }
+
+@keyframes treatFly {
+  0% { transform: translate(-120px,0) scale(.5); opacity:0; }
+  100% { transform: translate(0,-40px) scale(1); opacity:1; }
+}
+
+.treat {
+  position:absolute;
+  font-size:40px;
+  left:0;
+  top:40px;
+  animation:treatFly .8s forwards;
+}
+
+#endScreen {
+  display:none;
+  margin-top:20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Math Sloth</h1>
+<div id="timer">Time: 2:00</div>
+<div id="score">Score: 0</div>
+
+<div class="sloth-container">
+  <img id="sloth" src="defaultsloth.png">
+</div>
+
+<div class="speech" id="speech">Let's do some math!</div>
+
+<div class="card" id="gameCard">
+  <div id="question"></div>
+  <div class="answers" id="answers"></div>
+</div>
+
+<div id="endScreen">
+  <h2>Time's Up!</h2>
+  <p id="finalScore"></p>
+  <button onclick="startGame()">Play Again</button>
+</div>
+
+<script>
+
+// ================= IMAGE POOLS =================
+
+const defaultSloth = "defaultsloth.png";
+
+const happySloths = [
+"happysloth1.png",
+"happysloth2.png",
+"happysloth3.png",
+"happysloth4.png",
+"happysloth5.png",
+"heartsloth.png",
+"hearteyessloth.png",
+"stareyessloth.png",
+"coolsloth.png",
+"sparklesloth.png",
+"cutlerysloth.png",
+"partysloth.png"
+];
+
+const sadSloths = [
+"embarrassedsloth.png",
+"embarrassedsloth2.png",
+"sketchysloth.png",
+"eyebrowsloth.png",
+"frustratedsloth.png",
+"worriedsloth.png",
+"sadsloth.png"
+];
+
+// ================= GAME VARIABLES =================
+
+let score = 0;
+let timeLeft = 120;
+let timerInterval;
+let currentAnswer;
+let locked = false;
+
+// ================= UTILITIES =================
+
+function randomFrom(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+// ================= TIMER =================
+
+function startTimer(){
+  timeLeft = 120;
+  updateTimer();
+
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    updateTimer();
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      endGame();
+    }
+  },1000);
+}
+
+function updateTimer(){
+  const m = Math.floor(timeLeft/60);
+  const s = timeLeft%60;
+  document.getElementById("timer").textContent =
+    "Time: " + m + ":" + s.toString().padStart(2,'0');
+}
+
+// ================= QUESTIONS =================
+
+function generateQuestion(){
+  const isAdd = Math.random() > .4;
+  let a,b;
+
+  if(isAdd){
+    a = Math.floor(Math.random()*10)+1;
+    b = Math.floor(Math.random()*10);
+    currentAnswer = a+b;
+    document.getElementById("question").textContent = a + " + " + b;
+  } else {
+    a = Math.floor(Math.random()*10)+5;
+    b = Math.floor(Math.random()*a);
+    currentAnswer = a-b;
+    document.getElementById("question").textContent = a + " - " + b;
+  }
+
+  const answersDiv = document.getElementById("answers");
+  answersDiv.innerHTML = "";
+
+  const choices = new Set([currentAnswer]);
+  while(choices.size < 4){
+    choices.add(currentAnswer + Math.floor(Math.random()*5)-2);
+  }
+
+  [...choices].sort(()=>Math.random()-0.5).forEach(num=>{
+    const btn = document.createElement("button");
+    btn.textContent = num;
+    btn.className = "answer-btn";
+    btn.onclick = ()=>handleAnswer(num);
+    answersDiv.appendChild(btn);
+  });
+}
+
+// ================= ANSWERS =================
+
+function handleAnswer(choice){
+  if(locked) return;
+  locked = true;
+
+  const sloth = document.getElementById("sloth");
+  const speech = document.getElementById("speech");
+
+  if(choice === currentAnswer){
+    score++;
+    document.getElementById("score").textContent = "Score: " + score;
+
+    sloth.src = randomFrom(happySloths);
+    sloth.classList.add("happy");
+    speech.textContent = "Nice going!";
+
+    spawnTreat();
+  } else {
+    sloth.src = randomFrom(sadSloths);
+    sloth.classList.add("sad");
+    speech.textContent = "Aw, man!";
+  }
+
+  setTimeout(()=>{
+    sloth.classList.remove("happy","sad");
+    locked = false;
+    generateQuestion();
+  },800);
+}
+
+// ================= TREAT ANIMATION =================
+
+function spawnTreat(){
+  const treat = document.createElement("div");
+  treat.className = "treat";
+  treat.textContent = "🍪";
+  document.querySelector(".sloth-container").appendChild(treat);
+
+  setTimeout(()=>treat.remove(),800);
+}
+
+// ================= GAME FLOW =================
+
+function startGame(){
+  clearInterval(timerInterval);
+  score = 0;
+  document.getElementById("score").textContent = "Score: 0";
+  document.getElementById("speech").textContent = "Let's do some math!";
+  document.getElementById("sloth").src = defaultSloth;
+  document.getElementById("endScreen").style.display="none";
+  document.getElementById("gameCard").style.display="block";
+  generateQuestion();
+  startTimer();
+}
+
+function endGame(){
+  document.getElementById("gameCard").style.display="none";
+  document.getElementById("endScreen").style.display="block";
+  document.getElementById("finalScore").textContent =
+    "You got " + score + " correct answers!";
+  document.getElementById("sloth").src = defaultSloth;
+}
+
+// ================= START =================
+
+startGame();
+
+</script>
+
+</body>
+</html>
